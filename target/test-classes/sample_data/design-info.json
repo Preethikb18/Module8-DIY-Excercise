@@ -1,0 +1,10 @@
+{
+  "sampleData": {
+    "2d42bceb-bec9-4c4e-bd4e-d0a4f057a234": {
+      "vars-customer_id": "sample_data/java.dwl"
+    },
+    "fb901418-ac78-4eb7-8a6e-dd4a587fb338": {
+      "vars-CustomerID": "sample_data/java_1.dwl"
+    }
+  }
+}

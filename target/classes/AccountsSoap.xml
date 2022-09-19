@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<flow name="AccountsSoapFlow" doc:id="8c70c74f-88b7-4f8f-8d47-69891f2f7da5" >
+		<http:listener doc:name="GET /getAccountsSoap" doc:id="06185d02-7806-45e8-a661-5fada68f094f" config-ref="HTTP_Listener_config" path="/accountssoap" allowedMethods="GET"/>
+		<set-variable value="#[attributes.queryParams.account_id]" doc:name="CustomerID" doc:id="2bb70a62-c305-44b9-a43a-86a7065dd988" variableName="CustomerID"/>
+		<ee:transform doc:name="Transform Message" doc:id="fb901418-ac78-4eb7-8a6e-dd4a587fb338" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://training.mulesoft.com/
+---
+{
+	ns0#GetTransactionsforCustomers: {
+		customerID: vars.CustomerID as String
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume operation="GetTransactionsforCustomers" doc:name="Consume" doc:id="ca2a941c-1807-4479-8b6d-25741a8d2d89" config-ref="Web_Service_Consumer_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="2e640cb9-9e04-4e1e-a727-ec52c39cbd92" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+Data: payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

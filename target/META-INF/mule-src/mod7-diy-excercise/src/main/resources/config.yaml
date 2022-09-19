@@ -1,0 +1,15 @@
+http:
+  port: "8081"
+  
+accounts:
+  endpoints:  "module4-proxy-ap.us-e2.cloudhub.io"
+  protocol: "HTTP"
+  port: "80"
+  client_id:  "4b7508ae217c46a594873072d265cd22"
+  client_secret:  "7d63790Ab20f42DB9e53667fB12a4BAf"
+
+
+accounts2:
+  wsdl: "http://apdev-accounts-ws.cloudhub.io/api/transactions?wsdl"
+  service:  "TransactionServiceService"
+  port: "TransactionServicePort"

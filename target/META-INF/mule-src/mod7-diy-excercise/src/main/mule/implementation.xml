@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:central-it-group-api="http://www.mulesoft.org/schema/mule/central-it-group-api"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/central-it-group-api http://www.mulesoft.org/schema/mule/central-it-group-api/current/mule-central-it-group-api.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="d8afe217-eee7-4e51-88a7-378cec6eecae" >
+		<vm:queues >
+			<vm:queue queueName="TQueue" />
+		</vm:queues>
+	</vm:config>
+	<flow name="PostAccounts" doc:id="cdfd36db-2317-4f71-9d9f-095d6c5bf03d" >
+		<http:listener doc:name="POST /accounts" doc:id="b9aac84f-e0a2-4b73-885a-b2eb0bd39591" config-ref="HTTP_Listener_config" path="/accounts" allowedMethods="POST">
+			<http:response >
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"accounts" : payload.accounts,
+	"size" : vars.size,
+	"user_id" : payload.user_id
+}]]]></http:headers>
+			</http:response>
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="752e92f9-6f16-4fbc-9019-24275f960cf7" />
+		<flow-ref doc:name="subflow" doc:id="cb003e46-3743-42b2-9baa-b0b2cc1de3cb" name="subflow"/>
+		<vm:publish queueName="TQueue" doc:name="Publish" doc:id="b5437007-4494-491b-a054-f58488c6c73e" config-ref="VM_Config" timeout="100">
+		</vm:publish>
+		<central-it-group-api:create-account doc:name="Create account" doc:id="00b4072f-614e-4489-af23-6e21ae69cd84" config-ref="Central_IT_Group_API_Config" client-id="${accounts.client_id}" client-secret="${accounts.client_secret}"/>
+		<flow-ref doc:name="subflow" doc:id="3fed19b5-845c-46ac-bb9c-cf49ac0b7b09" name="subflow"/>
+		<ee:transform doc:name="Transform Message" doc:id="f151fb73-b31c-41f5-95bc-1f7a97b01248" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	
+	message: 'Account created'
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="3622f6e3-c1e7-4262-96fe-a4039bcc9f21" />
+	</flow>
+	<flow name="getAccountsByName" doc:id="ad9ec73a-ef27-4d85-a518-ceede1c8c89a" >
+		<http:listener doc:name="GET /GetAccountsByName" doc:id="ce0629a0-dad2-4d61-b756-b84095e8fc06" config-ref="HTTP_Listener_config" path="/accountsbyname" allowedMethods="GET"/>
+		<flow-ref doc:name="subflow" doc:id="2302eb9a-360b-4e41-97dc-13d9b123486c" name="subflow"/>
+		<central-it-group-api:get-accounts doc:name="Get accounts" doc:id="ea01e4c2-306c-438e-8ac5-01dc31091157" config-ref="Central_IT_Group_API_Config" client-id="${accounts.client_id}" client-secret="${accounts.client_secret}" sc-name="#[vars.acname]" user-id="#[vars.user_id]"/>
+		<ee:transform doc:name="Transform Message" doc:id="ae4febac-801b-4f5b-be1e-747f58314604" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.id as Number default 0,
+	firstName: payload01.firstName,
+	lastName: payload01.lastName,
+	address: payload01.address,
+	postal: payload01.postal,
+	country: payload01.country,
+	miles: payload01.miles,
+	creationDate: payload01.creationDate default "",
+	accType: payload01.accType
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="3889d121-283f-4d16-89e4-5dbea063f61c" />
+	</flow>
+	<sub-flow name="subflow" doc:id="cd56b255-2a30-4930-8fc8-506c50928ceb" >
+		<set-variable value="#[attributes.queryParams.account_name]" doc:name="acname" doc:id="cda93201-cd77-4a24-9eca-e396a3f8c722" variableName="acname"/>
+		<set-variable value="#[attributes.queryParams.accType]" doc:name="actype" doc:id="3aed2a7d-350a-4197-aed7-447db5ac3098" variableName="actype"/>
+		<set-variable value="#[attributes.headers.user_id]" doc:name="user_id" doc:id="f628e264-9c6f-4a0c-a322-8f4a0df96029" variableName="user_id"/>
+		<set-variable value="#[attributes.headers.client_id]" doc:name="client_id" doc:id="ae9c093c-5507-4ead-82de-bbd106def807" variableName="client_id"/>
+		<set-variable value="#[attributes.headers.client_secret]" doc:name="client_secret" doc:id="d9218bd7-5ba0-42fa-ab4c-eabfa25d2951" variableName="client_secret"/>
+		<set-variable value="#[sizeOf(payload)]" doc:name="size" doc:id="f4753e1e-994f-41f5-96ae-10401c6fa60b" variableName="size" />
+	</sub-flow>
+	<flow name="GetAccounts" doc:id="a20c3af9-1d02-41f1-9a25-374828fc765a" >
+		<vm:listener queueName="TQueue" doc:name="Listener" doc:id="dc05dbcf-0a2d-4b15-80fd-b2327a0b2268" config-ref="VM_Config">
+			<vm:response >
+				<vm:content ><![CDATA[#[output application/json
+---
+{user_id: vars.userId,
+	    accounts: payload
+}]]]></vm:content>
+			</vm:response>
+		</vm:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="bb23211b-9f79-46ff-aa4c-2dc342f455f1" message="Start of application"/>
+	</flow>
+	<flow name="getAccountsByType" doc:id="50f1ea3d-136b-4077-8b89-6aff26422b60" >
+		<http:listener doc:name="GET /GetAccountsByType" doc:id="b52bcbab-09c0-4dca-933f-6b97e09a97b5" config-ref="HTTP_Listener_config" path="/accountsbytype" allowedMethods="GET" />
+		<flow-ref doc:name="subflow" doc:id="86dba4ac-2f21-4a2a-99a9-e11ba4a0750c" name="subflow" />
+		<central-it-group-api:get-accounts doc:name="Get accounts" doc:id="e17f3874-8e98-4e45-90fc-25c697f2578e" config-ref="Central_IT_Group_API_Config" client-id="${accounts.client_id}" client-secret="${accounts.client_secret}" acc-type="#[vars.acType]" user-id="#[vars.user_id]"/>
+		<ee:transform doc:name="JAVA to JSON" doc:id="fd6821bf-a476-4167-a2f4-04550a7ab192" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.id as Number default 0,
+	firstName: payload01.firstName,
+	lastName: payload01.lastName,
+	address: payload01.address,
+	postal: payload01.postal,
+	country: payload01.country,
+	miles: payload01.miles,
+	creationDate: payload01.creationDate default "",
+	accType: payload01.accType
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="9e4ef602-c046-4228-81c8-7a329553c970" />
+	</flow>
+</mule>
